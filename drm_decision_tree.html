@@ -1,0 +1,613 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DRM Video Editing Decision Tree</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            padding: 30px;
+            overflow-x: auto;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+
+        .header h1 {
+            color: #2c3e50;
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            color: #7f8c8d;
+            font-size: 1.1em;
+        }
+
+        .reset-btn {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-size: 16px;
+            cursor: pointer;
+            margin: 20px auto;
+            display: block;
+            transition: transform 0.2s;
+        }
+
+        .reset-btn:hover {
+            transform: translateY(-2px);
+        }
+
+        .tree {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 40px;
+        }
+
+        .level {
+            display: flex;
+            justify-content: center;
+            gap: 60px;
+            width: 100%;
+            flex-wrap: wrap;
+        }
+
+        .node {
+            background: #fff;
+            border-radius: 12px;
+            padding: 20px;
+            min-width: 200px;
+            text-align: center;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+            border: 3px solid transparent;
+        }
+
+        .node:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 35px rgba(0,0,0,0.15);
+        }
+
+        .start-node {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            font-size: 1.3em;
+            font-weight: bold;
+            min-width: 250px;
+        }
+
+        .category-node {
+            background: linear-gradient(135deg, #3498db, #2980b9);
+            color: white;
+            font-weight: bold;
+            font-size: 1.1em;
+            min-width: 220px;
+        }
+
+        .category-node.selected {
+            background: linear-gradient(135deg, #27ae60, #219a52);
+            transform: scale(1.05);
+            box-shadow: 0 15px 35px rgba(39, 174, 96, 0.3);
+        }
+
+        .new-path { border-color: #27ae60; }
+        .new-path.category-node { background: linear-gradient(135deg, #27ae60, #219a52); }
+
+        .variation-path { border-color: #e74c3c; }
+        .variation-path.category-node { background: linear-gradient(135deg, #e74c3c, #c0392b); }
+
+        .alternate-path { border-color: #f39c12; }
+        .alternate-path.category-node { background: linear-gradient(135deg, #f39c12, #d68910); }
+
+        .instructions-node {
+            background: linear-gradient(135deg, #9b59b6, #8e44ad);
+            color: white;
+            font-weight: bold;
+            font-size: 1.2em;
+            min-width: 400px;
+            min-height: 120px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            border: 4px solid #9b59b6;
+        }
+
+        .instructions-node .main-question {
+            font-size: 1.3em;
+            margin-bottom: 15px;
+        }
+
+        .instructions-node .options {
+            display: flex;
+            gap: 30px;
+            margin-top: 10px;
+        }
+
+        .instructions-node .option {
+            background: rgba(255,255,255,0.2);
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 0.9em;
+        }
+
+        .action-node {
+            background: #f8f9fa;
+            border-color: #6c757d;
+            color: #495057;
+            min-height: 120px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+
+        .final-node {
+            background: linear-gradient(135deg, #8e44ad, #9b59b6);
+            color: white;
+            font-weight: bold;
+            min-width: 350px;
+            min-height: 150px;
+        }
+
+        .sub-content {
+            margin-top: 15px;
+            padding-top: 15px;
+            border-top: 2px dashed #bdc3c7;
+            font-size: 0.85em;
+            line-height: 1.4;
+        }
+
+        .sub-item {
+            margin: 8px 0;
+            padding: 8px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 6px;
+            text-align: left;
+        }
+
+        .connector {
+            width: 2px;
+            height: 30px;
+            background: #bdc3c7;
+            margin: 0 auto;
+        }
+
+        .tier-container {
+            display: flex;
+            gap: 30px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .tier-node {
+            background: #fff3cd;
+            border: 2px solid #ffc107;
+            min-width: 180px;
+            font-size: 0.85em;
+            padding: 15px;
+            border-radius: 8px;
+        }
+
+        .tier-node h4 {
+            color: #856404;
+            margin-bottom: 10px;
+        }
+
+        .tier-node ul {
+            list-style: none;
+            text-align: left;
+        }
+
+        .tier-node li {
+            margin: 5px 0;
+            padding-left: 15px;
+            position: relative;
+        }
+
+        .tier-node li::before {
+            content: "•";
+            position: absolute;
+            left: 0;
+            color: #ffc107;
+            font-weight: bold;
+        }
+
+        .instructions {
+            background: #e3f2fd;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 30px;
+            border-left: 4px solid #2196f3;
+        }
+
+        .instructions h3 {
+            color: #1976d2;
+            margin-bottom: 10px;
+        }
+
+        .legend {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            margin-top: 30px;
+            flex-wrap: wrap;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.9em;
+        }
+
+        .legend-color {
+            width: 20px;
+            height: 20px;
+            border-radius: 4px;
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        .path-specific {
+            display: none;
+        }
+
+        .path-specific.active {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 40px;
+        }
+
+        @media (max-width: 768px) {
+            .level {
+                flex-direction: column;
+                align-items: center;
+                gap: 20px;
+            }
+            
+            .tier-container {
+                flex-direction: column;
+                align-items: center;
+            }
+            
+            .header h1 {
+                font-size: 2em;
+            }
+
+            .instructions-node .options {
+                flex-direction: column;
+                gap: 10px;
+                align-items: center;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>DRM Video Editing Decision Tree</h1>
+            <p>Select your project type to view the complete workflow</p>
+            <button class="reset-btn" onclick="resetView()">View All Paths</button>
+        </div>
+
+        <div class="instructions">
+            <h3>How to Use This Decision Tree:</h3>
+            <p>Click on your project type (New, Variation, or Alternate) to view the complete workflow for that specific path. All decision points and requirements are displayed immediately.</p>
+        </div>
+
+        <div class="tree">
+            <!-- Level 1: Start -->
+            <div class="level" id="start-level">
+                <div class="node start-node">
+                    <strong>START HERE</strong><br>
+                    Identify Project Category
+                </div>
+            </div>
+
+            <div class="connector" id="start-connector"></div>
+
+            <!-- Level 2: Main Categories -->
+            <div class="level" id="category-level">
+                <div class="node category-node new-path" onclick="selectPath('new')">
+                    <strong>NEW</strong><br>
+                    New Content Creation
+                </div>
+                <div class="node category-node variation-path" onclick="selectPath('variation')">
+                    <strong>VARIATION</strong><br>
+                    Content Variations
+                </div>
+                <div class="node category-node alternate-path" onclick="selectPath('alternate')">
+                    <strong>ALTERNATE</strong><br>
+                    Alternative Versions
+                </div>
+            </div>
+
+            <div class="connector" id="category-connector"></div>
+
+            <!-- Level 3: Direct Instructions Check (appears immediately after category selection) -->
+            <div class="path-specific instructions-check">
+                <div class="level">
+                    <div class="node instructions-node">
+                        <div class="main-question">Were Direct Instructions Provided?</div>
+                        <div class="options">
+                            <div class="option">YES: Proceed with independent decisions</div>
+                            <div class="option">NO: Check performance data or request guidance</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="connector"></div>
+            </div>
+
+            <!-- NEW PATH WORKFLOW (Level 4+) -->
+            <div class="path-specific new-workflow">
+                <div class="level">
+                    <div class="node action-node new-path">
+                        <strong>Primary Goal</strong>
+                        <div class="sub-content">
+                            <div class="sub-item"><strong>HOOKS:</strong> Develop unique selling angles, attention grabbers, innovative storytelling</div>
+                            <div class="sub-item"><strong>CORES:</strong> Focus on primary messaging, testimonials, demonstrations</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="connector"></div>
+
+                <div class="level">
+                    <div class="node action-node new-path">
+                        <strong>Content Creation Style</strong>
+                        <div class="sub-content">
+                            <div class="sub-item"><strong>90%</strong> based on current top-performing creatives (pacing, style, tone)</div>
+                            <div class="sub-item"><strong>10%</strong> completely new and experimental</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="connector"></div>
+
+                <div class="level">
+                    <div class="node action-node new-path">
+                        <strong>Verification Steps</strong>
+                        <div class="sub-content">
+                            <div class="sub-item">• Ensure alignment with brand guidelines (voice, visual style, key messaging)</div>
+                            <div class="sub-item">• Confirm compatibility with campaigns and marketing strategies</div>
+                            <div class="sub-item">• Review pacing, visual/audio quality, storytelling effectiveness</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- VARIATION PATH WORKFLOW (Level 4+) -->
+            <div class="path-specific variation-workflow">
+                <div class="level">
+                    <div class="node action-node variation-path">
+                        <strong>Hook-Core Compatibility</strong>
+                        <div class="sub-content">
+                            <div class="sub-item"><strong>COMPATIBLE:</strong> Proceed to detailed technical quality check</div>
+                            <div class="sub-item"><strong>NOT COMPATIBLE:</strong> Adjust music to match tone, minor pacing tweaks, modify/add text overlays</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="connector"></div>
+
+                <div class="level">
+                    <div class="node action-node variation-path">
+                        <strong>Technical Quality Review</strong>
+                        <div class="sub-content">
+                            <div class="sub-item">• Inspect clip transitions (smooth, logical)</div>
+                            <div class="sub-item">• Visual consistency (brightness, color grading, resolution)</div>
+                            <div class="sub-item">• Audio continuity (volume, clear dialogue/music)</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="connector"></div>
+
+                <div class="level">
+                    <div class="node action-node variation-path">
+                        <strong>Compliance Review</strong>
+                        <div class="sub-content">
+                            <div class="sub-item">• Verify adherence to brand guidelines</div>
+                            <div class="sub-item">• Ensure messaging aligns with campaign goals</div>
+                            <div class="sub-item">• Check regulatory compliance</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ALTERNATE PATH WORKFLOW (Level 4+) -->
+            <div class="path-specific alternate-workflow">
+                <div class="level">
+                    <div class="node action-node alternate-path">
+                        <strong>Clearly Define Modifications</strong><br>
+                        <small>Choose appropriate tier based on scope of changes needed</small>
+                    </div>
+                </div>
+
+                <div class="connector"></div>
+
+                <div class="level">
+                    <div class="tier-container">
+                        <div class="tier-node">
+                            <h4>Tier 1 (Minimal Changes)</h4>
+                            <ul>
+                                <li>Alternate captions</li>
+                                <li>Add/change banners</li>
+                                <li>Change video ratio</li>
+                                <li>Problem-solution mashups</li>
+                            </ul>
+                        </div>
+                        <div class="tier-node">
+                            <h4>Tier 2 (Moderate Changes)</h4>
+                            <ul>
+                                <li>Further mashup hooks</li>
+                                <li>Visual pacing/timing adjustments</li>
+                                <li>Add/remove visual effects</li>
+                            </ul>
+                        </div>
+                        <div class="tier-node">
+                            <h4>Tier 3 (Significant Changes)</h4>
+                            <ul>
+                                <li>New hook visuals</li>
+                                <li>Major script rewrites</li>
+                                <li>New testimonials/endorsements</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="connector"></div>
+
+                <div class="level">
+                    <div class="node action-node alternate-path">
+                        <strong>Compliance and Messaging Check</strong>
+                        <div class="sub-content">
+                            <div class="sub-item">• Confirm brand messaging consistency</div>
+                            <div class="sub-item">• Verify alignment with brand guidelines</div>
+                            <div class="sub-item">• Ensure proper version numbering</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="connector" id="final-connector"></div>
+
+            <!-- Level 7: Final Quality Check (ALWAYS VISIBLE) -->
+            <div class="level" id="final-level">
+                <div class="node final-node">
+                    <strong>FINAL QUALITY & COMPLIANCE CHECK</strong>
+                    <div class="sub-content">
+                        <div class="sub-item">• Label clearly (New, Variation, Alternate)</div>
+                        <div class="sub-item">• Brand guideline adherence</div>
+                        <div class="sub-item">• Visual/audio quality</div>
+                        <div class="sub-item">• Messaging/content clarity</div>
+                        <div class="sub-item">• Regulatory compliance</div>
+                        <div class="sub-item">• Approve video for publishing</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="connector"></div>
+
+            <!-- Level 8: Documentation & Archival -->
+            <div class="level">
+                <div class="node final-node">
+                    <strong>DOCUMENTATION & ARCHIVAL</strong>
+                    <div class="sub-content">
+                        <div class="sub-item">• Document each step and outcomes clearly</div>
+                        <div class="sub-item">• Archive final video and detailed notes</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="legend">
+            <div class="legend-item">
+                <div class="legend-color" style="background: linear-gradient(135deg, #27ae60, #219a52);"></div>
+                <span>New Content Path</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background: linear-gradient(135deg, #e74c3c, #c0392b);"></div>
+                <span>Variation Path</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background: linear-gradient(135deg, #f39c12, #d68910);"></div>
+                <span>Alternate Path</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background: linear-gradient(135deg, #9b59b6, #8e44ad);"></div>
+                <span>Critical Decision Point</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background: linear-gradient(135deg, #8e44ad, #9b59b6);"></div>
+                <span>Final Steps</span>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentPath = null;
+
+        function selectPath(pathType) {
+            currentPath = pathType;
+            
+            // Hide all path-specific workflows
+            document.querySelectorAll('.path-specific').forEach(workflow => {
+                workflow.classList.remove('active');
+            });
+            
+            // Show instructions check (Level 3) - always appears first
+            document.querySelector('.instructions-check').classList.add('active');
+            
+            // Show selected workflow (Level 4+)
+            document.querySelector(`.${pathType}-workflow`).classList.add('active');
+            
+            // Update category node selection
+            document.querySelectorAll('.category-node').forEach(node => {
+                node.classList.remove('selected');
+            });
+            document.querySelector(`.${pathType}-path.category-node`).classList.add('selected');
+            
+            // Update instruction text
+            const pathNames = {
+                'new': 'New Content Creation',
+                'variation': 'Content Variations', 
+                'alternate': 'Alternative Versions'
+            };
+            
+            document.querySelector('.header p').textContent = `Following workflow for: ${pathNames[pathType]}`;
+        }
+
+        function resetView() {
+            currentPath = null;
+            
+            // Hide all path-specific workflows
+            document.querySelectorAll('.path-specific').forEach(workflow => {
+                workflow.classList.remove('active');
+            });
+            
+            // Remove selection from category nodes
+            document.querySelectorAll('.category-node').forEach(node => {
+                node.classList.remove('selected');
+            });
+            
+            // Reset instruction text
+            document.querySelector('.header p').textContent = 'Select your project type to view the complete workflow';
+        }
+
+        // Initialize with no path selected
+        document.addEventListener('DOMContentLoaded', function() {
+            resetView();
+        });
+    </script>
+</body>
+</html>
